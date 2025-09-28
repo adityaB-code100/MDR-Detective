@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MDR-Detective - Digital Contact Tracing Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+            --card-shadow-hover: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+        }
+
+        .dark {
+            --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+            --card-shadow-hover: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(-45deg, #f8fafc, #e2e8f0, #f1f5f9, #f8fafc);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        .dark body {
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #334155, #1e293b);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Header with glass morphism */
+        header {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .dark header {
+            background: rgba(30, 41, 59, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Risk indicators with pulse animations */
+        .risk-low { 
+            background: linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(16, 185, 129, 0.1) 100%); 
+            color:#059669;
+            border-left: 3px solid #10b981;
+            font-weight: 600;
+            animation: pulseLow 3s infinite;
+        }
+
+        .risk-med { 
+            background: linear-gradient(135deg, rgba(234,179,8,0.15) 0%, rgba(245, 158, 11, 0.1) 100%); 
+            color:#b45309;
+            border-left: 3px solid #f59e0b;
+            font-weight: 600;
+            animation: pulseMed 2s infinite;
+        }
+
+        .risk-high { 
+            background: linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(220, 38, 38, 0.1) 100%); 
+            color:#dc2626;
+            border-left: 3px solid #ef4444;
+            font-weight: 600;
+            animation: pulseHigh 1.5s infinite;
+        }
+
+        @keyframes pulseLow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes pulseMed {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0); }
+        }
+
+        @keyframes pulseHigh {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+        }
+
+        /* Dashboard cards with 3D effects */
+        .dashboard-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--success), var(--warning), var(--danger));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.5s ease;
+        }
+
+        .dashboard-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-8px) rotateX(5deg);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        /* Floating animation for cards */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .dashboard-card:nth-child(1) { animation: float 6s ease-in-out infinite; }
+        .dashboard-card:nth-child(2) { animation: float 6s ease-in-out infinite 1s; }
+        .dashboard-card:nth-child(3) { animation: float 6s ease-in-out infinite 2s; }
+        .dashboard-card:nth-child(4) { animation: float 6s ease-in-out infinite 3s; }
+
+        /* Table row animations */
+        .contacts-table tbody tr {
+            transition: all 0.3s ease;
+            animation: slideIn 0.5s ease forwards;
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .contacts-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
+        .contacts-table tbody tr:nth-child(2) { animation-delay: 0.2s; }
+        .contacts-table tbody tr:nth-child(3) { animation-delay: 0.3s; }
+        .contacts-table tbody tr:nth-child(4) { animation-delay: 0.4s; }
+        .contacts-table tbody tr:nth-child(5) { animation-delay: 0.5s; }
+
+        .contacts-table tbody tr:hover {
+            background-color: rgba(99, 102, 241, 0.08);
+            transform: scale(1.01);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .dark .contacts-table tbody tr:hover {
+            background-color: rgba(99, 102, 241, 0.15);
+        }
+
+        /* Button with ripple effect */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-primary:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+        }
+
+        /* Alert animations */
+        .alert-item {
+            animation: alertSlideIn 0.5s ease-out forwards, alertPulse 2s infinite;
+            border-left: 4px solid #ef4444;
+            background: linear-gradient(to right, rgba(239, 68, 68, 0.05), transparent);
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+
+        @keyframes alertSlideIn {
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes alertPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); }
+            50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+        }
+
+        /* Map shimmer effect */
+        #map::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        .dark ::-webkit-scrollbar-track {
+            background: #334155;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, var(--primary-dark), #3730a3);
+        }
+
+        /* Modal animation */
+        @keyframes modalEnter {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .animate-modal {
+            animation: modalEnter 0.3s ease-out;
+        }
+
+        /* Network graph styles */
+        .network-graph {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+
+        .node {
+            position: absolute;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .node:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        .node-patient {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .node-doctor {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .node-nurse {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+
+        .node-staff {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .node-infected {
+            animation: infectedPulse 2s infinite;
+        }
+
+        @keyframes infectedPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        }
+
+        .connection {
+            position: absolute;
+            height: 2px;
+            background: rgba(100, 100, 100, 0.3);
+            transform-origin: 0 0;
+            z-index: 1;
+        }
+
+        .connection-high-risk {
+            background: linear-gradient(to right, rgba(239, 68, 68, 0.7), rgba(239, 68, 68, 0.3));
+            height: 3px;
+        }
+
+        .connection-medium-risk {
+            background: linear-gradient(to right, rgba(245, 158, 11, 0.7), rgba(245, 158, 11, 0.3));
+        }
+
+        .connection-low-risk {
+            background: linear-gradient(to right, rgba(16, 185, 129, 0.7), rgba(16, 185, 129, 0.3));
+        }
+
+        .graph-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .graph-controls button {
+            background: #f1f5f9;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .graph-controls button:hover {
+            background: #e2e8f0;
+        }
+
+        .dark .graph-controls button {
+            background: #334155;
+            color: white;
+        }
+
+        .dark .graph-controls button:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+    <!-- Top navbar -->
+    <header class="bg-white dark:bg-slate-800 shadow sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-4">
+                    <div class="text-indigo-600 dark:text-indigo-300 font-bold text-xl flex items-center gap-2">
+                        <i class="fas fa-shield-virus"></i>
+                        MDR-Detective
+                    </div>
+                    <div class="text-sm text-slate-500 dark:text-slate-300 hidden md:block">Digital Contact Tracing & Screening</div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="hidden sm:block">
+                        <input id="search" type="search" placeholder="Search patient, staff, ward..." class="px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 w-64 transition-all duration-300" />
+                    </div>
+                    <button id="themeToggle" class="p-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="refresh" class="px-4 py-2 rounded-md btn-primary text-white flex items-center gap-2">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Overview cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-sm text-slate-400">Active Cases</div>
+                        <div class="text-2xl font-semibold">12</div>
+                        <div class="text-xs text-slate-500 mt-2">Updated just now</div>
+                    </div>
+                    <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                        <i class="fas fa-procedures text-indigo-600 dark:text-indigo-400"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-sm text-slate-400">High-risk Contacts</div>
+                        <div class="text-2xl font-semibold text-amber-600">5</div>
+                        <div class="text-xs text-slate-500 mt-2">Triggered alerts: 3</div>
+                    </div>
+                    <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                        <i class="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-sm text-slate-400">Avg. Risk Score</div>
+                        <div class="text-2xl font-semibold">23%</div>
+                        <div class="text-xs text-slate-500 mt-2">Last 24h</div>
+                    </div>
+                    <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                        <i class="fas fa-chart-line text-green-600 dark:text-green-400"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-sm text-slate-400">Contacts Tracked</div>
+                        <div class="text-2xl font-semibold">1,342</div>
+                        <div class="text-xs text-slate-500 mt-2">Since deployment</div>
+                    </div>
+                    <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <i class="fas fa-users text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left column: Map + summary -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-semibold">Ward Occupancy & Contact Map</h2>
+                        <div class="text-sm text-slate-400">Realtime (simulated)</div>
+                    </div>
+                    <div id="map" class="bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-700 p-4 rounded-lg relative overflow-hidden">
+                        <!-- Map visualization with contact tracing -->
+                        <div class="h-48 flex items-center justify-center text-slate-400 relative">
+                            <div class="absolute top-4 left-4 bg-red-500 text-white px-2 py-1 rounded text-xs">ICU</div>
+                            <div class="absolute top-12 left-12 bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs">A</div>
+                            <div class="absolute top-20 left-20 bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs">D1</div>
+                            <div class="absolute top-16 left-32 bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs">N1</div>
+                            <div class="absolute bottom-4 right-4 bg-amber-500 text-white px-2 py-1 rounded text-xs">Ward-2</div>
+                            <div class="absolute bottom-12 right-12 bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs">C</div>
+                            <div class="absolute bottom-20 right-20 bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs">D2</div>
+                            <div class="absolute bottom-16 right-32 bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs">N2</div>
+                            <div class="text-center">
+                                <i class="fas fa-map-marked-alt text-4xl mb-2 text-slate-300"></i>
+                                <p>Hospital Ward Visualization</p>
+                                <p class="text-xs mt-1">Integrate with Leaflet/Mapbox for live tracking</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-md">
+                            <div class="text-xs text-slate-400">Avg. Exposure (mins)</div>
+                            <div class="text-xl font-medium">14</div>
+                        </div>
+                        <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-md">
+                            <div class="text-xs text-slate-400">Contacts last 24h</div>
+                            <div class="text-xl font-medium">128</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-semibold">Risk Trend (Last 7 days)</h2>
+                        <div class="text-sm text-slate-400">Model: ML Risk Engine</div>
+                    </div>
+                    <canvas id="riskChart" height="120"></canvas>
+                </div>
+
+                <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-semibold">Contact Network Visualization</h2>
+                        <div class="text-sm text-slate-400">Infection Spread Model</div>
+                    </div>
+                    <div id="networkGraph" class="network-graph bg-slate-50 dark:bg-slate-900 rounded-lg relative">
+                        <!-- Network graph will be rendered here -->
+                    </div>
+                    <div class="graph-controls">
+                        <button id="resetGraph">Reset View</button>
+                        <button id="toggleAnimation">Pause Animation</button>
+                        <button id="simulateSpread">Simulate Spread</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right column: Contact table -->
+            <aside class="space-y-6">
+                <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold">Recent Contacts</h3>
+                        <button id="addMock" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                            <i class="fas fa-plus"></i>
+                            Add Mock
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm contacts-table">
+                            <thead class="text-slate-500 text-left bg-slate-50 dark:bg-slate-900">
+                                <tr>
+                                    <th class="px-3 py-3">Name</th>
+                                    <th class="px-3 py-3">Role</th>
+                                    <th class="px-3 py-3">Ward</th>
+                                    <th class="px-3 py-3">Duration</th>
+                                    <th class="px-3 py-3">Risk</th>
+                                    <th class="px-3 py-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contactsTable" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <!-- rows populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                    <h3 class="font-semibold mb-2 flex items-center gap-2">
+                        <i class="fas fa-bell text-amber-500"></i>
+                        Alerts
+                    </h3>
+                    <div id="alerts" class="space-y-2 text-sm text-slate-700 dark:text-slate-300 max-h-60 overflow-y-auto">
+                        <!-- alerts populated by JS -->
+                    </div>
+                </div>
+
+                <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                    <h3 class="font-semibold mb-2 flex items-center gap-2">
+                        <i class="fas fa-microchip text-indigo-500"></i>
+                        Mesh Network Status
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Active Nodes</span>
+                            <span class="font-semibold text-green-600">24/24</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Data Sync</span>
+                            <span class="font-semibold text-green-600">Real-time</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Last Update</span>
+                            <span class="font-semibold">2 mins ago</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </section>
+
+        <!-- Modal: Contact details (hidden) -->
+        <div id="modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-30">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg w-11/12 sm:w-3/4 lg:w-1/2 p-6 animate-modal">
+                <div class="flex justify-between items-start">
+                    <h4 id="modalTitle" class="text-xl font-semibold">Contact Details</h4>
+                    <button id="closeModal" class="text-slate-500 hover:text-slate-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="modalBody" class="mt-4 text-sm text-slate-700 dark:text-slate-300">
+                    <!-- populated by JS -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto p-4 text-xs text-slate-500 border-t border-slate-200 dark:border-slate-700 mt-8">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+            <div class="mb-2 md:mb-0">
+                MDR-Detective • Sentinel X • Prototype UI — for SIH 2025
+            </div>
+            <div class="flex gap-4">
+                <span class="flex items-center gap-1">
+                    <i class="fas fa-shield-alt text-green-500"></i>
+                    <span>SSL/TLS Secured</span>
+                </span>
+                <span class="flex items-center gap-1">
+                    <i class="fas fa-database text-blue-500"></i>
+                    <span>PostgreSQL</span>
+                </span>
+                <span class="flex items-center gap-1">
+                    <i class="fas fa-brain text-purple-500"></i>
+                    <span>ML Engine</span>
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Sample dataset (would normally come from backend API)
+        const contacts = [
+            { id:1, name:'Patient A', role:'Patient', ward:'ICU', duration:15, rssi:-65, timestamp:'2025-09-26 10:00', contactsWith:'Patient B' },
+            { id:2, name:'Doctor D1', role:'Doctor', ward:'ICU', duration:10, rssi:-60, timestamp:'2025-09-26 10:05', contactsWith:'Patient A' },
+            { id:3, name:'Nurse N1', role:'Nurse', ward:'ICU', duration:12, rssi:-62, timestamp:'2025-09-26 10:07', contactsWith:'Patient A' },
+            { id:4, name:'Patient C', role:'Patient', ward:'Ward-2', duration:8, rssi:-70, timestamp:'2025-09-26 11:00', contactsWith:'Patient X' },
+            { id:5, name:'Doctor D2', role:'Doctor', ward:'Ward-2', duration:6, rssi:-66, timestamp:'2025-09-26 11:03', contactsWith:'Patient C' }
+        ];
+
+        // Network graph data
+        const networkData = {
+            nodes: [
+                { id: 'A', name: 'Patient A', role: 'Patient', x: 50, y: 50, size: 30, infected: true },
+                { id: 'B', name: 'Patient B', role: 'Patient', x: 150, y: 100, size: 25, infected: true },
+                { id: 'C', name: 'Patient C', role: 'Patient', x: 250, y: 50, size: 25, infected: false },
+                { id: 'D1', name: 'Doctor D1', role: 'Doctor', x: 100, y: 150, size: 20, infected: false },
+                { id: 'D2', name: 'Doctor D2', role: 'Doctor', x: 200, y: 150, size: 20, infected: false },
+                { id: 'N1', name: 'Nurse N1', role: 'Nurse', x: 150, y: 200, size: 20, infected: false },
+                { id: 'N2', name: 'Nurse N2', role: 'Nurse', x: 50, y: 250, size: 20, infected: false },
+                { id: 'S1', name: 'Staff S1', role: 'Staff', x: 250, y: 250, size: 18, infected: false }
+            ],
+            connections: [
+                { source: 'A', target: 'B', risk: 'high', duration: 15 },
+                { source: 'A', target: 'D1', risk: 'high', duration: 10 },
+                { source: 'A', target: 'N1', risk: 'medium', duration: 5 },
+                { source: 'B', target: 'D2', risk: 'medium', duration: 8 },
+                { source: 'C', target: 'D2', risk: 'low', duration: 3 },
+                { source: 'D1', target: 'N1', risk: 'low', duration: 12 },
+                { source: 'D2', target: 'N1', risk: 'low', duration: 7 },
+                { source: 'N1', target: 'N2', risk: 'medium', duration: 20 },
+                { source: 'N1', target: 'S1', risk: 'low', duration: 5 }
+            ]
+        };
+
+        // Utility: compute a simple risk score (0-100) using duration and RSSI
+        function computeRisk(contact){
+            // duration more increases risk; stronger RSSI (less negative) increases risk
+            const durScore = Math.min(50, contact.duration * 2);
+            const rssiStrength = Math.max(0, 100 - Math.abs(contact.rssi)); // e.g. -60 -> 40
+            const rssiScore = Math.min(50, rssiStrength);
+            const score = Math.round((durScore * 0.6) + (rssiScore * 0.4));
+            return Math.min(100, score);
+        }
+
+        function riskCategory(score){
+            if(score >= 60) return 'High';
+            if(score >= 30) return 'Medium';
+            return 'Low';
+        }
+
+        // Render contacts table
+        function renderTable(list){
+            const tbody = document.getElementById('contactsTable');
+            tbody.innerHTML = '';
+            list.forEach(c => {
+                const score = computeRisk(c);
+                const cat = riskCategory(score);
+                const tr = document.createElement('tr');
+                tr.className = 'bg-white dark:bg-slate-900';
+                tr.innerHTML = `
+                    <td class="px-3 py-3 font-medium">${c.name}</td>
+                    <td class="px-3 py-3">
+                        <span class="inline-flex items-center gap-1">
+                            ${c.role === 'Doctor' ? '<i class="fas fa-user-md text-blue-500"></i>' : 
+                              c.role === 'Nurse' ? '<i class="fas fa-user-nurse text-purple-500"></i>' : 
+                              '<i class="fas fa-user-injured text-red-500"></i>'}
+                            ${c.role}
+                        </span>
+                    </td>
+                    <td class="px-3 py-3">${c.ward}</td>
+                    <td class="px-3 py-3">${c.duration}m</td>
+                    <td class="px-3 py-3"><span class="px-3 py-1.5 rounded text-xs ${cat==='High'? 'risk-high' : cat==='Medium'? 'risk-med' : 'risk-low'}">${cat} (${score}%)</span></td>
+                    <td class="px-3 py-3"><button class="text-indigo-600 text-sm font-medium hover:text-indigo-800 flex items-center gap-1" onclick="showDetails(${c.id})">
+                        <i class="fas fa-info-circle"></i>
+                        Details
+                    </button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Render network graph
+        function renderNetworkGraph() {
+            const container = document.getElementById('networkGraph');
+            container.innerHTML = '';
+            
+            // Create connections first (so they appear behind nodes)
+            networkData.connections.forEach(conn => {
+                const source = networkData.nodes.find(n => n.id === conn.source);
+                const target = networkData.nodes.find(n => n.id === conn.target);
+                
+                if (source && target) {
+                    const connection = document.createElement('div');
+                    connection.className = `connection ${conn.risk === 'high' ? 'connection-high-risk' : 
+                                           conn.risk === 'medium' ? 'connection-medium-risk' : 'connection-low-risk'}`;
+                    
+                    // Calculate position and rotation
+                    const dx = target.x - source.x;
+                    const dy = target.y - source.y;
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    
+                    connection.style.width = `${length}px`;
+                    connection.style.left = `${source.x}px`;
+                    connection.style.top = `${source.y}px`;
+                    connection.style.transform = `rotate(${angle}deg)`;
+                    
+                    container.appendChild(connection);
+                }
+            });
+            
+            // Create nodes
+            networkData.nodes.forEach(node => {
+                const nodeEl = document.createElement('div');
+                nodeEl.className = `node ${node.infected ? 'node-infected' : ''} node-${node.role.toLowerCase()}`;
+                nodeEl.style.width = `${node.size}px`;
+                nodeEl.style.height = `${node.size}px`;
+                nodeEl.style.left = `${node.x - node.size/2}px`;
+                nodeEl.style.top = `${node.y - node.size/2}px`;
+                nodeEl.textContent = node.id;
+                nodeEl.title = `${node.name} (${node.role})${node.infected ? ' - INFECTED' : ''}`;
+                
+                nodeEl.addEventListener('click', () => {
+                    showNodeDetails(node);
+                });
+                
+                container.appendChild(nodeEl);
+            });
+        }
+
+        function showNodeDetails(node) {
+            const modal = document.getElementById('modal');
+            const body = document.getElementById('modalBody');
+            const title = document.getElementById('modalTitle');
+            
+            title.textContent = `${node.name} - Network Details`;
+            
+            // Find connections for this node
+            const connections = networkData.connections.filter(
+                conn => conn.source === node.id || conn.target === node.id
+            );
+            
+            let connectionsHtml = '';
+            connections.forEach(conn => {
+                const otherId = conn.source === node.id ? conn.target : conn.source;
+                const otherNode = networkData.nodes.find(n => n.id === otherId);
+                connectionsHtml += `
+                    <div class="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700">
+                        <span>${otherNode.name} (${otherNode.role})</span>
+                        <span class="px-2 py-1 rounded text-xs ${conn.risk === 'high' ? 'risk-high' : 
+                                 conn.risk === 'medium' ? 'risk-med' : 'risk-low'}">
+                            ${conn.risk.toUpperCase()} (${conn.duration}m)
+                        </span>
+                    </div>
+                `;
+            });
+            
+            body.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <strong class="text-slate-600 dark:text-slate-400">Role:</strong><br>
+                            ${node.role}
+                        </div>
+                        <div>
+                            <strong class="text-slate-600 dark:text-slate-400">Status:</strong><br>
+                            <span class="px-2 py-1 rounded text-xs ${node.infected ? 'risk-high' : 'risk-low'}">
+                                ${node.infected ? 'INFECTED' : 'CLEAN'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <strong class="text-slate-600 dark:text-slate-400">Direct Connections:</strong>
+                        <div class="mt-2 max-h-40 overflow-y-auto">
+                            ${connectionsHtml || '<p class="text-slate-500">No direct connections</p>'}
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button class="px-4 py-2 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors flex-1 flex items-center justify-center gap-2" onclick="markNodeQuarantine('${node.id}')">
+                            <i class="fas fa-house-user"></i>
+                            Quarantine
+                        </button>
+                        <button class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition-colors flex-1 flex items-center justify-center gap-2" onclick="notifyNode('${node.id}')">
+                            <i class="fas fa-bell"></i>
+                            Notify
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function markNodeQuarantine(nodeId) {
+            const node = networkData.nodes.find(n => n.id === nodeId);
+            addAlert(`Quarantine recommended for ${node.name} (${node.role})`);
+            closeModal();
+        }
+
+        function notifyNode(nodeId) {
+            const node = networkData.nodes.find(n => n.id === nodeId);
+            addAlert(`Infection control notified for ${node.name} — immediate review required.`);
+            closeModal();
+        }
+
+        function showDetails(id){
+            const c = contacts.find(x=>x.id===id);
+            const modal = document.getElementById('modal');
+            const body = document.getElementById('modalBody');
+            const title = document.getElementById('modalTitle');
+            const score = computeRisk(c);
+            title.textContent = c.name + ' — Details';
+            body.innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><strong class="text-slate-600 dark:text-slate-400">Role:</strong><br>${c.role}</div>
+                        <div><strong class="text-slate-600 dark:text-slate-400">Ward:</strong><br>${c.ward}</div>
+                        <div><strong class="text-slate-600 dark:text-slate-400">Contact With:</strong><br>${c.contactsWith}</div>
+                        <div><strong class="text-slate-600 dark:text-slate-400">Duration:</strong><br>${c.duration} minutes</div>
+                        <div><strong class="text-slate-600 dark:text-slate-400">RSSI:</strong><br>${c.rssi} dBm</div>
+                        <div><strong class="text-slate-600 dark:text-slate-400">Risk Score:</strong><br><span class="px-2 py-1 rounded text-xs ${riskCategory(score)==='High'? 'risk-high' : riskCategory(score)==='Medium'? 'risk-med' : 'risk-low'}">${score}% (${riskCategory(score)})</span></div>
+                    </div>
+                    <hr class="my-4 border-slate-200 dark:border-slate-700">
+                    <div class="space-y-2">
+                        <button class="px-4 py-2 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors w-full flex items-center justify-center gap-2" onclick="markQuarantine(${c.id})">
+                            <i class="fas fa-house-user"></i>
+                            Recommend Quarantine
+                        </button>
+                        <button class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition-colors w-full flex items-center justify-center gap-2" onclick="triggerAlert(${c.id})">
+                            <i class="fas fa-bell"></i>
+                            Notify Infection Control
+                        </button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function markQuarantine(id){
+            const c = contacts.find(x=>x.id===id);
+            addAlert(`Quarantine recommended for ${c.name} (Score: ${computeRisk(c)}%)`);
+            closeModal();
+        }
+
+        function triggerAlert(id){
+            const c = contacts.find(x=>x.id===id);
+            addAlert(`Infection control notified for ${c.name} — immediate review required.`);
+            closeModal();
+        }
+
+        function addAlert(msg){
+            const wrap = document.getElementById('alerts');
+            const el = document.createElement('div');
+            el.className = 'alert-item p-3 bg-red-50 dark:bg-red-900/20 rounded text-rose-700 dark:text-rose-300 text-sm flex items-start gap-2';
+            el.innerHTML = `
+                <i class="fas fa-exclamation-circle mt-0.5"></i>
+                <div>
+                    <div class="font-medium">${new Date().toLocaleString()}</div>
+                    <div>${msg}</div>
+                </div>
+            `;
+            wrap.prepend(el);
+            
+            // Limit to 5 alerts
+            if (wrap.children.length > 5) {
+                wrap.removeChild(wrap.lastChild);
+            }
+        }
+
+        function closeModal(){
+            const modal = document.getElementById('modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // close modal
+        document.getElementById('closeModal').addEventListener('click', closeModal);
+
+        // search
+        document.getElementById('search').addEventListener('input', (e)=>{
+            const q = e.target.value.toLowerCase().trim();
+            const filtered = contacts.filter(c => 
+                [c.name, c.role, c.ward, c.contactsWith].join(' ').toLowerCase().includes(q)
+            );
+            renderTable(filtered);
+        });
+
+        // theme toggle
+        const themeBtn = document.getElementById('themeToggle');
+        themeBtn.addEventListener('click', ()=>{
+            document.documentElement.classList.toggle('dark');
+            const icon = themeBtn.querySelector('i');
+            if (document.documentElement.classList.contains('dark')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+
+        // add mock data
+        document.getElementById('addMock').addEventListener('click', ()=>{
+            const id = contacts.length + 1;
+            const roles = ['Doctor', 'Nurse', 'Patient', 'Staff'];
+            const wards = ['ICU', 'Ward-1', 'Ward-2', 'Emergency'];
+            const randomRole = roles[Math.floor(Math.random() * roles.length)];
+            const randomWard = wards[Math.floor(Math.random() * wards.length)];
+            
+            const mock = { 
+                id, 
+                name:`${randomRole} ${id}`, 
+                role:randomRole, 
+                ward:randomWard, 
+                duration:Math.floor(Math.random()*20)+3, 
+                rssi: -50 - Math.floor(Math.random()*30), 
+                timestamp: new Date().toISOString().slice(0,16), 
+                contactsWith:'Patient A' 
+            };
+            contacts.unshift(mock);
+            renderTable(contacts);
+            addAlert(`New contact added: ${mock.name}`);
+        });
+
+        // refresh
+        document.getElementById('refresh').addEventListener('click', ()=>{
+            const refreshBtn = document.getElementById('refresh');
+            const icon = refreshBtn.querySelector('i');
+            icon.classList.add('fa-spin');
+            
+            setTimeout(() => {
+                // In real app: fetch('/api/contacts').then(...)
+                renderTable(contacts);
+                addAlert('Data refreshed from mesh network');
+                icon.classList.remove('fa-spin');
+            }, 1500);
+        });
+
+        // initialize chart
+        const ctx = document.getElementById('riskChart').getContext('2d');
+        const riskChart = new Chart(ctx, {
+            type:'line',
+            data:{
+                labels:['D-6','D-5','D-4','D-3','D-2','D-1','Today'],
+                datasets:[{ 
+                    label:'Avg Risk %', 
+                    data:[12,18,22,19,28,23,24], 
+                    tension:0.3, 
+                    fill:true,
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    borderColor: 'rgb(79, 70, 229)',
+                    pointBackgroundColor: 'rgb(79, 70, 229)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
+            },
+            options:{
+                responsive: true,
+                plugins:{
+                    legend:{display:false},
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales:{ 
+                    y:{ 
+                        beginAtZero:true, 
+                        max:100,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Network graph controls
+        document.getElementById('resetGraph').addEventListener('click', () => {
+            renderNetworkGraph();
+        });
+
+        document.getElementById('toggleAnimation').addEventListener('click', (e) => {
+            const infectedNodes = document.querySelectorAll('.node-infected');
+            if (e.target.textContent === 'Pause Animation') {
+                infectedNodes.forEach(node => {
+                    node.style.animationPlayState = 'paused';
+                });
+                e.target.textContent = 'Resume Animation';
+            } else {
+                infectedNodes.forEach(node => {
+                    node.style.animationPlayState = 'running';
+                });
+                e.target.textContent = 'Pause Animation';
+            }
+        });
+
+        document.getElementById('simulateSpread').addEventListener('click', () => {
+            // Randomly infect one more node
+            const cleanNodes = networkData.nodes.filter(n => !n.infected);
+            if (cleanNodes.length > 0) {
+                const randomIndex = Math.floor(Math.random() * cleanNodes.length);
+                cleanNodes[randomIndex].infected = true;
+                renderNetworkGraph();
+                addAlert(`Infection spread detected: ${cleanNodes[randomIndex].name} is now marked as infected`);
+            }
+        });
+
+        // initial render
+        renderTable(contacts);
+        renderNetworkGraph();
+
+        // Example: auto-check and create alerts for high-risk contacts on load
+        (function checkHighRiskOnLoad(){
+            contacts.forEach(c=>{ 
+                if(computeRisk(c) >= 60) {
+                    addAlert(`High-risk contact detected: ${c.name} (Score: ${computeRisk(c)}%)`);
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
