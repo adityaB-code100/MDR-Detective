@@ -8,6 +8,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+
+
+
+
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
         :root {
@@ -566,6 +570,51 @@
                     </h3>
                     <div id="alerts" class="space-y-2 text-sm text-slate-700 dark:text-slate-300 max-h-60 overflow-y-auto">
                         <!-- alerts populated by JS -->
+                    </div>
+                </div>
+                
+                <!-- High Risk Contacts Section -->
+                <div class="dashboard-card bg-white dark:bg-slate-800 rounded-xl shadow p-4">
+                    <h3 class="font-semibold mb-3 flex items-center gap-2">
+                        <i class="fas fa-exclamation-triangle text-red-500"></i>
+                        High Risk Contacts
+                    </h3>
+                    <div class="space-y-3">
+                        <!-- Patient B -->
+                        <div class="flex items-center justify-between p-3 rounded-lg border-l-4 border-red-500 bg-red-50 dark:bg-red-900/20">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold">B</div>
+                                <div>
+                                    <div class="font-medium">Patient B</div>
+                                    <div class="text-xs text-slate-600 dark:text-slate-300">ICU • 87% infection risk</div>
+                                </div>
+                            </div>
+                            <div class="px-3 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">Critical</div>
+                        </div>
+                        
+                        <!-- Dr. Patel -->
+                        <div class="flex items-center justify-between p-3 rounded-lg border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-900/20">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">C</div>
+                                <div>
+                                    <div class="font-medium">Dr. Patel</div>
+                                    <div class="text-xs text-slate-600 dark:text-slate-300">ICU • 72% infection risk</div>
+                                </div>
+                            </div>
+                            <div class="px-3 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full">High</div>
+                        </div>
+                        
+                        <!-- Nurse Roy -->
+                        <div class="flex items-center justify-between p-3 rounded-lg border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold">D</div>
+                                <div>
+                                    <div class="font-medium">Nurse Roy</div>
+                                    <div class="text-xs text-slate-600 dark:text-slate-300">ICU • 58% infection risk</div>
+                                </div>
+                            </div>
+                            <div class="px-3 py-1 bg-yellow-500 text-white text-xs font-semibold rounded-full">Medium</div>
+                        </div>
                     </div>
                 </div>
 
